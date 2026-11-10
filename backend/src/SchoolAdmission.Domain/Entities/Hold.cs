@@ -32,8 +32,8 @@ public class Hold
             ClassId = classId,
             StudentId = studentId,
             Status = HoldStatus.Held,
-            CreatedAt = nowUtc,
-            ExpiresAt = nowUtc + duration
+            CreatedAt = TimePrecision.TruncateToMicroseconds(nowUtc),
+            ExpiresAt = TimePrecision.TruncateToMicroseconds(nowUtc + duration)
         };
     }
 
@@ -60,7 +60,7 @@ public class Hold
                 $"Hold cannot be confirmed because it is {effective.ToString().ToUpperInvariant()}.");
 
         Status = HoldStatus.Confirmed;
-        ConfirmedAt = nowUtc;
+        ConfirmedAt = TimePrecision.TruncateToMicroseconds(nowUtc);
     }
 
     public void Cancel(DateTime nowUtc)
@@ -75,7 +75,7 @@ public class Hold
                 $"Hold cannot be cancelled because it is {effective.ToString().ToUpperInvariant()}.");
 
         Status = HoldStatus.Cancelled;
-        CancelledAt = nowUtc;
+        CancelledAt = TimePrecision.TruncateToMicroseconds(nowUtc);
     }
 
     // Background sweeper ar new hold er age cleanup e bebohar hobe

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolAdmission.Api.Middleware;
+using SchoolAdmission.Api.Validation;
 using SchoolAdmission.Application;
 using SchoolAdmission.Application.Common;
 using SchoolAdmission.Infrastructure;
@@ -36,9 +37,10 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {
     // Vanga JSON, vul type ba khali body, sob ekhane ese 400 VALIDATION_ERROR hobe
+    // errors porishkar kore dei, jate .NET type name ba "request field" message bahire na jay
     options.InvalidModelStateResponseFactory = context =>
     {
-        var problem = new ValidationProblemDetails(context.ModelState)
+        var problem = new ValidationProblemDetails(ValidationErrors.Clean(context))
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "VALIDATION_ERROR",

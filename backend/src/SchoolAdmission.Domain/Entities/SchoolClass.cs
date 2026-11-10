@@ -1,3 +1,4 @@
+using SchoolAdmission.Domain.Common;
 using SchoolAdmission.Domain.Exceptions;
 
 namespace SchoolAdmission.Domain.Entities;
@@ -32,7 +33,7 @@ public class SchoolClass
             Id = Guid.NewGuid(),
             Name = trimmed,
             TotalSeats = totalSeats,
-            CreatedAt = nowUtc
+            CreatedAt = TimePrecision.TruncateToMicroseconds(nowUtc)
         };
     }
 }
