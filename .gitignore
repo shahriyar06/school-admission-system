@@ -495,3 +495,6 @@ frontend/dist/
 
 # ---- Assignment PDF  ----
 *.pdf
+
+# ---- Local test report (commit hobe na) ----
+testcondition.md
