@@ -1,0 +1,64 @@
+@baseUrl = http://localhost:8080
+@studentA = 20152691234567890
+@studentB = 20152691234567891
+
+### Create class with 1 seat -> 201
+# @name createClass
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Class 6 - Morning Shift", "totalSeats": 1 }
+
+###
+@classId = {{createClass.response.body.$.id}}
+
+### List classes -> 200
+GET {{baseUrl}}/classes
+
+### Get one class -> 200
+GET {{baseUrl}}/classes/{{classId}}
+
+### Student A holds a seat -> 201 (status HELD)
+POST {{baseUrl}}/classes/{{classId}}/holds
+X-Student-Id: {{studentA}}
+
+### Student A again -> 409 ALREADY_APPLIED
+POST {{baseUrl}}/classes/{{classId}}/holds
+X-Student-Id: {{studentA}}
+
+### Student B, class is full -> 409 NO_SEATS
+POST {{baseUrl}}/classes/{{classId}}/holds
+X-Student-Id: {{studentB}}
+
+########## Invalid cases ##########
+
+### totalSeats 0 -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Zero Seats", "totalSeats": 0 }
+
+### Missing name -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "totalSeats": 10 }
+
+### totalSeats "abc" -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad Type", "totalSeats": "abc" }
+
+### Missing X-Student-Id -> 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/classes/{{classId}}/holds
+
+### X-Student-Id too short -> 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/classes/{{classId}}/holds
+X-Student-Id: 12345
+
+### Malformed class id -> 404
+GET {{baseUrl}}/classes/not-a-guid
+
+### Unknown class id -> 404 CLASS_NOT_FOUND
+GET {{baseUrl}}/classes/00000000-0000-0000-0000-000000000000
