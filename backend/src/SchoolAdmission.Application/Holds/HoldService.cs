@@ -58,7 +58,89 @@ public sealed class HoldService(IAppDbContext db, IClock clock, HoldOptions opti
         return HoldResponse.From(hold, schoolClass.Name, now);
     }
 
-    // Part 2 te confirm/cancel e o eta abar use hobe
+    public async Task<HoldResponse> ConfirmAsync(Guid holdId, string? studentId, CancellationToken ct)
+    {
+        var validStudentId = ValidateStudentId(studentId);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Hold er row lock korlam। Eksathe duita confirm asle duijonei HELD dekhe
+        // duibar update korte pare, lock thakle ditiyo jon wait korbe ar CONFIRMED dekhbe
+        var hold = await db.FindHoldForUpdateAsync(holdId, ct)
+            ?? throw new NotFoundException("HOLD_NOT_FOUND", "Hold not found.");
+        EnsureOwner(hold, validStudentId);
+
+        // Lock paoar por somoi nilam, jate wait er somoi expire hole seta dhora pore
+        var now = clock.UtcNow;
+
+        // Agei CONFIRMED hole kichu bodlabe na (idempotent), expired hole 409 dibe
+        hold.Confirm(now);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        return HoldResponse.From(hold, await GetClassNameAsync(hold.ClassId, ct), now);
+    }
+
+    public async Task CancelAsync(Guid holdId, string? studentId, CancellationToken ct)
+    {
+        var validStudentId = ValidateStudentId(studentId);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        // Confirm ar cancel eksathe asle jate dutoi na hoy, tai ekhaneo row lock
+        var hold = await db.FindHoldForUpdateAsync(holdId, ct)
+            ?? throw new NotFoundException("HOLD_NOT_FOUND", "Hold not found.");
+        EnsureOwner(hold, validStudentId);
+
+        var now = clock.UtcNow;
+
+        // Agei CANCELLED hole kono error nai, CONFIRMED/EXPIRED hole 409 dibe
+        hold.Cancel(now);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+    }
+
+    // Header lagbe na, holdId jana thaklei dekha jabe
+    public async Task<HoldResponse> GetAsync(Guid holdId, CancellationToken ct)
+    {
+        var hold = await db.Holds
+            .AsNoTracking()
+            .Include(h => h.Class)
+            .FirstOrDefaultAsync(h => h.Id == holdId, ct)
+            ?? throw new NotFoundException("HOLD_NOT_FOUND", "Hold not found.");
+
+        return HoldResponse.From(hold, hold.Class.Name, clock.UtcNow);
+    }
+
+    public async Task<IReadOnlyList<HoldResponse>> GetMineAsync(string? studentId, CancellationToken ct)
+    {
+        var validStudentId = ValidateStudentId(studentId);
+
+        var holds = await db.Holds
+            .AsNoTracking()
+            .Include(h => h.Class)
+            .Where(h => h.StudentId == validStudentId)
+            .OrderByDescending(h => h.CreatedAt)
+            .ToListAsync(ct);
+
+        var now = clock.UtcNow;
+        return holds.Select(h => HoldResponse.From(h, h.Class.Name, now)).ToList();
+    }
+
+    // Onno student er hold confirm/cancel korte dibo na
+    private static void EnsureOwner(Hold hold, string studentId)
+    {
+        if (hold.StudentId != studentId)
+            throw new ForbiddenException("FORBIDDEN", "This hold belongs to another student.");
+    }
+
+    private Task<string> GetClassNameAsync(Guid classId, CancellationToken ct) =>
+        db.Classes
+            .Where(c => c.Id == classId)
+            .Select(c => c.Name)
+            .SingleAsync(ct);
+
+    // Create, confirm, cancel ar /me/holds sob jaygay eta use hocche
     private static string ValidateStudentId(string? studentId)
     {
         var trimmed = studentId?.Trim();

@@ -1,64 +1,258 @@
 @baseUrl = http://localhost:8080
 @studentA = 20152691234567890
 @studentB = 20152691234567891
+@studentC = 20152691234567892
 
-### Create class with 1 seat -> 201
-# @name createClass
+#####################################################################
+# API 1: POST /classes
+#####################################################################
+
+### 1.1 সঠিক class (১ seat) → 201, body তে id, name, totalSeats
+# @name smallClass
 POST {{baseUrl}}/classes
 Content-Type: application/json
 
 { "name": "Class 6 - Morning Shift", "totalSeats": 1 }
 
-###
-@classId = {{createClass.response.body.$.id}}
-
-### List classes -> 200
-GET {{baseUrl}}/classes
-
-### Get one class -> 200
-GET {{baseUrl}}/classes/{{classId}}
-
-### Student A holds a seat -> 201 (status HELD)
-POST {{baseUrl}}/classes/{{classId}}/holds
-X-Student-Id: {{studentA}}
-
-### Student A again -> 409 ALREADY_APPLIED
-POST {{baseUrl}}/classes/{{classId}}/holds
-X-Student-Id: {{studentA}}
-
-### Student B, class is full -> 409 NO_SEATS
-POST {{baseUrl}}/classes/{{classId}}/holds
-X-Student-Id: {{studentB}}
-
-########## Invalid cases ##########
-
-### totalSeats 0 -> 400 VALIDATION_ERROR
+### 1.2 দ্বিতীয় class (৫ seat), নামের আগে-পরে space → 201, name trim হয়ে আসবে
+# @name bigClass
 POST {{baseUrl}}/classes
 Content-Type: application/json
 
-{ "name": "Zero Seats", "totalSeats": 0 }
+{ "name": "   Class 6 - Day Shift   ", "totalSeats": 5 }
 
-### Missing name -> 400 VALIDATION_ERROR
+### 1.3 totalSeats = 0 → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad", "totalSeats": 0 }
+
+### 1.4 totalSeats ঋণাত্মক → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad", "totalSeats": -5 }
+
+### 1.5 totalSeats অনেক বড় (10001) → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad", "totalSeats": 10001 }
+
+### 1.6 totalSeats নেই → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad" }
+
+### 1.7 name নেই → 400 VALIDATION_ERROR
 POST {{baseUrl}}/classes
 Content-Type: application/json
 
 { "totalSeats": 10 }
 
-### totalSeats "abc" -> 400 VALIDATION_ERROR
+### 1.8 name শুধু space → 400 VALIDATION_ERROR
 POST {{baseUrl}}/classes
 Content-Type: application/json
 
-{ "name": "Bad Type", "totalSeats": "abc" }
+{ "name": "    ", "totalSeats": 10 }
 
-### Missing X-Student-Id -> 400 INVALID_STUDENT_ID
-POST {{baseUrl}}/classes/{{classId}}/holds
+### 1.9 totalSeats text → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
 
-### X-Student-Id too short -> 400 INVALID_STUDENT_ID
-POST {{baseUrl}}/classes/{{classId}}/holds
-X-Student-Id: 12345
+{ "name": "Bad", "totalSeats": "abc" }
 
-### Malformed class id -> 404
+### 1.10 totalSeats দশমিক → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad", "totalSeats": 1.5 }
+
+### 1.11 ভাঙা JSON → 400 VALIDATION_ERROR
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+{ "name": "Bad", "totalSeats": 
+
+### 1.12 খালি body → 400
+POST {{baseUrl}}/classes
+Content-Type: application/json
+
+### 1.13 Content-Type ছাড়া → 415 (Unsupported Media Type, এটাও 4xx তাই ঠিক আছে)
+POST {{baseUrl}}/classes
+
+{ "name": "Bad", "totalSeats": 10 }
+
+#####################################################################
+# API 2: GET /classes
+#####################################################################
+
+### 2.1 সব class → 200, array
+# smallClass আর bigClass দুটোতেই heldSeats 0, confirmedSeats 0, availableSeats = totalSeats
+GET {{baseUrl}}/classes
+
+#####################################################################
+# API 3: GET /classes/{classId}
+#####################################################################
+
+### 3.1 সঠিক ID → 200, heldSeats 0, availableSeats 1
+GET {{baseUrl}}/classes/{{smallClass.response.body.$.id}}
+
+### 3.2 নেই এমন GUID → 404 CLASS_NOT_FOUND
+GET {{baseUrl}}/classes/00000000-0000-0000-0000-000000000000
+
+### 3.3 ভুল format এর ID → 404 (body খালি থাকবে, এটা স্বাভাবিক)
 GET {{baseUrl}}/classes/not-a-guid
 
-### Unknown class id -> 404 CLASS_NOT_FOUND
-GET {{baseUrl}}/classes/00000000-0000-0000-0000-000000000000
+#####################################################################
+# API 4: POST /classes/{classId}/holds
+#####################################################################
+
+### 4.1 Student A, smallClass এ আবেদন → 201
+# body: holdId, classId, className, studentId, status "HELD", expiresAt (এখন থেকে প্রায় ১০ মিনিট পর, UTC)
+# @name holdA
+POST {{baseUrl}}/classes/{{smallClass.response.body.$.id}}/holds
+X-Student-Id: {{studentA}}
+
+### 4.2 Student A আবার একই class এ → 409 ALREADY_APPLIED
+POST {{baseUrl}}/classes/{{smallClass.response.body.$.id}}/holds
+X-Student-Id: {{studentA}}
+
+### 4.3 Student B, smallClass এ (seat শেষ) → 409 NO_SEATS
+POST {{baseUrl}}/classes/{{smallClass.response.body.$.id}}/holds
+X-Student-Id: {{studentB}}
+
+### 4.4 Student A, অন্য class (bigClass) এ → 201 (আলাদা class এ আবেদন করা যায়)
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+X-Student-Id: {{studentA}}
+
+### 4.5 Student B, bigClass এ → 201
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+X-Student-Id: {{studentB}}
+
+### 4.6 X-Student-Id header নেই → 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+
+### 4.7 Student ID ১৬ digit → 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+X-Student-Id: 2015269123456789
+
+### 4.8 Student ID ১৮ digit → 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+X-Student-Id: 201526912345678901
+
+### 4.9 Student ID তে অক্ষর → 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+X-Student-Id: 2015269123456789A
+
+### 4.10 নেই এমন class → 404 CLASS_NOT_FOUND
+POST {{baseUrl}}/classes/00000000-0000-0000-0000-000000000000/holds
+X-Student-Id: {{studentC}}
+
+### 4.11 ভুল format এর class ID → 404
+POST {{baseUrl}}/classes/not-a-guid/holds
+X-Student-Id: {{studentC}}
+
+#####################################################################
+# আবেদনের পর seat এর হিসাব ঠিক আছে কিনা
+#####################################################################
+
+### 5.1 সব class → 200
+# smallClass: heldSeats 1, availableSeats 0
+# bigClass:   heldSeats 2, availableSeats 3
+GET {{baseUrl}}/classes
+
+### 5.2 smallClass আলাদাভাবে → 200, heldSeats 1, availableSeats 0
+GET {{baseUrl}}/classes/{{smallClass.response.body.$.id}}
+
+#####################################################################
+# API 5: GET /holds/{holdId}
+#####################################################################
+
+### 6.1 holdA দেখা (header লাগবে না) → 200, status "HELD"
+GET {{baseUrl}}/holds/{{holdA.response.body.$.holdId}}
+
+### 6.2 নেই এমন GUID → 404 HOLD_NOT_FOUND
+GET {{baseUrl}}/holds/00000000-0000-0000-0000-000000000000
+
+### 6.3 ভুল format এর ID → 404 (body খালি থাকবে)
+GET {{baseUrl}}/holds/not-a-guid
+
+#####################################################################
+# API 6: POST /holds/{holdId}/confirm
+#####################################################################
+
+### 7.1 অন্য student (B) holdA confirm করতে চাইলে → 403 FORBIDDEN
+POST {{baseUrl}}/holds/{{holdA.response.body.$.holdId}}/confirm
+X-Student-Id: {{studentB}}
+
+### 7.2 মালিক (A) confirm করলে → 200, status "CONFIRMED"
+POST {{baseUrl}}/holds/{{holdA.response.body.$.holdId}}/confirm
+X-Student-Id: {{studentA}}
+
+### 7.3 আবার confirm → 200, এখনও "CONFIRMED" (idempotent, কিছু বদলাবে না)
+POST {{baseUrl}}/holds/{{holdA.response.body.$.holdId}}/confirm
+X-Student-Id: {{studentA}}
+
+### 7.4 confirm এর পর smallClass → 200, confirmedSeats 1, heldSeats 0, availableSeats 0
+GET {{baseUrl}}/classes/{{smallClass.response.body.$.id}}
+
+### 7.5 X-Student-Id ছাড়া confirm → 400 INVALID_STUDENT_ID
+POST {{baseUrl}}/holds/{{holdA.response.body.$.holdId}}/confirm
+
+#####################################################################
+# API 7: DELETE /holds/{holdId}
+#####################################################################
+
+### 8.1 confirm হয়ে যাওয়া hold বাতিল → 409 INVALID_HOLD_STATE
+DELETE {{baseUrl}}/holds/{{holdA.response.body.$.holdId}}
+X-Student-Id: {{studentA}}
+
+### 8.2 Student C, bigClass এ নতুন আবেদন → 201
+# @name holdC
+POST {{baseUrl}}/classes/{{bigClass.response.body.$.id}}/holds
+X-Student-Id: {{studentC}}
+
+### 8.3 Student C তার hold বাতিল করলে → 204 (body নেই)
+DELETE {{baseUrl}}/holds/{{holdC.response.body.$.holdId}}
+X-Student-Id: {{studentC}}
+
+### 8.4 আবার বাতিল → 204 (আগেই বাতিল, কোনো error নেই)
+DELETE {{baseUrl}}/holds/{{holdC.response.body.$.holdId}}
+X-Student-Id: {{studentC}}
+
+### 8.5 বাতিল হওয়া hold confirm → 409 INVALID_HOLD_STATE
+POST {{baseUrl}}/holds/{{holdC.response.body.$.holdId}}/confirm
+X-Student-Id: {{studentC}}
+
+### 8.6 X-Student-Id ছাড়া বাতিল → 400 INVALID_STUDENT_ID
+DELETE {{baseUrl}}/holds/{{holdC.response.body.$.holdId}}
+
+#####################################################################
+# API 8: GET /me/holds
+#####################################################################
+
+### 9.1 Student A এর সব hold → 200, list (নতুন থেকে পুরনো)
+# bigClass এ HELD, smallClass এ CONFIRMED
+GET {{baseUrl}}/me/holds
+X-Student-Id: {{studentA}}
+
+### 9.2 X-Student-Id ছাড়া → 400 INVALID_STUDENT_ID
+GET {{baseUrl}}/me/holds
+
+### 9.3 Student ID "12345" → 400 INVALID_STUDENT_ID
+GET {{baseUrl}}/me/holds
+X-Student-Id: 12345
+
+#####################################################################
+# Expiry test (নিজে হাতে করতে হবে)
+#####################################################################
+# ১. PowerShell এ hold এর মেয়াদ ২০ সেকেন্ড করে app চালাও:
+#      $env:HOLD_DURATION_SECONDS = "20"
+#      dotnet run --project src/SchoolAdmission.Api
+# ২. উপরের 1.1 আর 4.1 চালাও (নতুন class, নতুন hold) → 201, status "HELD"
+# ৩. ২৫ সেকেন্ড অপেক্ষা করো
+# ৪. 6.1 চালাও → 200, status "EXPIRED" (কোনো API call ছাড়াই expire হয়ে গেছে)
+# ৫. 7.2 চালাও → 409 INVALID_HOLD_STATE (expired hold confirm করা যায় না)
+# ৬. 3.1 চালাও → heldSeats 0, availableSeats 1 (seat আবার খালি)
