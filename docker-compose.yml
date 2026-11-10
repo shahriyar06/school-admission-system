@@ -64,5 +64,21 @@ services:
     environment:
       TEST_DB_CONNECTION: Host=db;Port=5432;Username=${POSTGRES_USER:-admission};Password=${POSTGRES_PASSWORD:-admission};GSS Encryption Mode=Disable
 
+  # React app (nginx), browser e kholo: http://localhost:3000
+  frontend:
+    build:
+      context: ./frontend
+      target: final
+    container_name: school-admission-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    environment:
+      # API call kore user er browser (host e), container na। Tai host theke jaoa jay emon URL
+      # (http://localhost:8080) dite hobe, http://backend:8080 browser chinbe na
+      API_URL: ${API_URL:-http://localhost:8080}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   pgdata:
