@@ -1,3 +1,23 @@
+# Docker er vitore backend DB te jay service name `db` ar port 5432 diye।
+# Host er 5433 port sudhu local development (dotnet run / dotnet test) er jonno.
+
+# backend ar backend2 er common config, duibar likhte hobe na
+x-backend: &backend
+  build:
+    context: ./backend
+    target: final
+  image: school-admission-backend:latest
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: unless-stopped
+  environment:
+    # Kerberos (GSS) lage na; na dile Npgsql libgssapi khuje log e error dekhay
+    ConnectionStrings__Default: Host=db;Port=5432;Database=${POSTGRES_DB:-admission};Username=${POSTGRES_USER:-admission};Password=${POSTGRES_PASSWORD:-admission};GSS Encryption Mode=Disable
+    HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+    CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+    ASPNETCORE_ENVIRONMENT: Production
+
 services:
   db:
     image: postgres:16-alpine
@@ -16,6 +36,33 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  backend:
+    <<: *backend
+    container_name: school-admission-backend
+    ports:
+      - "8080:8080"
+
+  # Bonus multi-instance: ekoi DB te ditiyo ekta backend process (port 8081)
+  # chalu: docker compose --profile multi up -d --build
+  backend2:
+    <<: *backend
+    container_name: school-admission-backend-2
+    ports:
+      - "8081:8080"
+    profiles: ["multi"]
+
+  # Integration test Docker er vitorei: docker compose --profile test run --rm tests
+  tests:
+    build:
+      context: ./backend
+      target: test
+    profiles: ["test"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TEST_DB_CONNECTION: Host=db;Port=5432;Username=${POSTGRES_USER:-admission};Password=${POSTGRES_PASSWORD:-admission};GSS Encryption Mode=Disable
 
 volumes:
   pgdata:
