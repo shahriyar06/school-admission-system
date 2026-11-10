@@ -3,20 +3,27 @@ import { queryKeys } from '@/lib/query-keys'
 import type { Hold } from '@/types/api'
 import { cancelHold, confirmHold, createHold, getHold, getMyHolds } from './api'
 
+// HELD thakle server er status (expire / onno tab e confirm) dhorte ei interval e refetch
+export const HOLD_REFRESH_MS = 5000
+
 export function useHold(holdId: string | undefined) {
   return useQuery({
     queryKey: queryKeys.holds.detail(holdId ?? ''),
     queryFn: ({ signal }) => getHold(holdId!, signal),
     enabled: !!holdId,
+    // Sudhu HELD obosthay poll, CONFIRMED / EXPIRED / CANCELLED ar bodlabe na
+    refetchInterval: (query) => (query.state.data?.status === 'HELD' ? HOLD_REFRESH_MS : false),
   })
 }
 
-// Student ID na thakle query cholbe na
+// Student ID na thakle query cholbe na. Key te studentId ache, tai ID bodlale notun data ase
 export function useMyHolds(studentId: string | null) {
   return useQuery({
     queryKey: queryKeys.holds.mine(studentId ?? ''),
     queryFn: ({ signal }) => getMyHolds(studentId!, signal),
     enabled: !!studentId,
+    refetchInterval: HOLD_REFRESH_MS,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -38,10 +45,9 @@ export function useCreateHold() {
   return useMutation({
     mutationFn: ({ classId, studentId }: { classId: string; studentId: string }) =>
       createHold(classId, studentId),
-    onSuccess: async (hold) => {
-      cacheHold(queryClient, hold)
-      await invalidateAfterHoldChange(queryClient)
-    },
+    onSuccess: (hold) => cacheHold(queryClient, hold),
+    // NO_SEATS / ALREADY_APPLIED holeo seat count ar "amar abedon" bodlate pare, tai sob somoy refresh
+    onSettled: () => invalidateAfterHoldChange(queryClient),
   })
 }
 
@@ -50,12 +56,9 @@ export function useConfirmHold() {
   return useMutation({
     mutationFn: ({ holdId, studentId }: { holdId: string; studentId: string }) =>
       confirmHold(holdId, studentId),
-    onSuccess: async (hold) => {
-      cacheHold(queryClient, hold)
-      await invalidateAfterHoldChange(queryClient)
-    },
-    // 409 (expired) holeo status bodle gache, tai refresh
-    onError: () => invalidateAfterHoldChange(queryClient),
+    onSuccess: (hold) => cacheHold(queryClient, hold),
+    // 409 (expired) holeo status bodle gache, tai success / error dui khetrei refresh
+    onSettled: () => invalidateAfterHoldChange(queryClient),
   })
 }
 
@@ -64,6 +67,11 @@ export function useCancelHold() {
   return useMutation({
     mutationFn: ({ holdId, studentId }: { holdId: string; studentId: string }) =>
       cancelHold(holdId, studentId),
+    // 204 e body nai, tai cache e nijei CANCELLED boshai, server refetch porer step e
+    onSuccess: (_data, { holdId }) =>
+      queryClient.setQueryData<Hold>(queryKeys.holds.detail(holdId), (old) =>
+        old ? { ...old, status: 'CANCELLED' } : old,
+      ),
     onSettled: () => invalidateAfterHoldChange(queryClient),
   })
 }
