@@ -486,6 +486,7 @@ $RECYCLE.BIN/
 # ---- Frontend ----
 node_modules/
 frontend/dist/
+frontend/coverage/
 *.local
 
 # ---- Env ----

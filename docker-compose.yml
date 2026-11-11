@@ -64,6 +64,14 @@ services:
     environment:
       TEST_DB_CONNECTION: Host=db;Port=5432;Username=${POSTGRES_USER:-admission};Password=${POSTGRES_PASSWORD:-admission};GSS Encryption Mode=Disable
 
+  # Frontend er test (Vitest + MSW) Docker er vitorei: docker compose --profile test run --rm frontend-test
+  # MSW fake backend use kore, tai db / backend lage na
+  frontend-test:
+    build:
+      context: ./frontend
+      target: test
+    profiles: ["test"]
+
   # React app (nginx), browser e kholo: http://localhost:3000
   frontend:
     build:
