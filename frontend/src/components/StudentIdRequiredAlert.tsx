@@ -6,10 +6,10 @@ export const STUDENT_ID_REQUIRED_MESSAGE = 'আবেদন করতে উপ�
 // Student ID save kora na thakle ei message, header er box e ID dite bole
 export function StudentIdRequiredAlert({ message = STUDENT_ID_REQUIRED_MESSAGE }: { message?: string }) {
   return (
-    <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+    <Alert className="border-warning/40 bg-warning/10 px-4 py-3 text-warning-foreground">
       <IdCard aria-hidden />
       <AlertTitle>Student ID দেওয়া হয়নি</AlertTitle>
-      <AlertDescription className="text-amber-900/90">{message}</AlertDescription>
+      <AlertDescription className="text-warning-foreground/90">{message}</AlertDescription>
     </Alert>
   )
 }

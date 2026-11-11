@@ -1,15 +1,27 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
-/* Geist e Bangla glyph nai, tai Bangla lekha Noto Sans Bengali theke asbe */
+/* Font local e bundle, Docker e offline o kaj kore. Inter e Bangla nai, tai Noto Sans Bengali porer font */
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/noto-sans-bengali";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', 'Noto Sans Bengali Variable', sans-serif;
+    --font-sans: "Inter Variable", "Noto Sans Bengali Variable", ui-sans-serif, system-ui, sans-serif;
+    /* Semantic rong: success = CONFIRMED, warning = HELD, danger = EXPIRED/CANCELLED */
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-danger: var(--danger);
+    --color-danger-foreground: var(--danger-foreground);
+    --color-success-soft: var(--success-soft);
+    --color-warning-soft: var(--warning-soft);
+    --color-danger-soft: var(--danger-soft);
+    --color-primary-hover: var(--primary-hover);
+    --color-sidebar-muted: var(--sidebar-muted);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -41,9 +53,9 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
+    --radius-sm: calc(var(--radius) * 0.67);
+    --radius-md: var(--radius);
+    --radius-lg: calc(var(--radius) * 1.33);
     --radius-xl: calc(var(--radius) * 1.4);
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
@@ -51,38 +63,53 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /* Neutral: page / card / border / text */
+    --background: #F8FAFC;
+    --foreground: #0F172A;
+    --card: #FFFFFF;
+    --card-foreground: #0F172A;
+    --popover: #FFFFFF;
+    --popover-foreground: #0F172A;
+    /* Primary blue-700, hover blue-800 */
+    --primary: #1D4ED8;
+    --primary-hover: #1E40AF;
+    --primary-foreground: #FFFFFF;
+    --secondary: #F1F5F9;
+    --secondary-foreground: #0F172A;
+    --muted: #F1F5F9;
+    --muted-foreground: #64748B;
+    --accent: #EFF6FF;
+    --accent-foreground: #1D4ED8;
+    --destructive: #B91C1C;
+    --border: #E2E8F0;
+    --input: #CBD5E1;
+    --ring: #3B82F6;
+    --chart-1: #1D4ED8;
+    --chart-2: #059669;
+    --chart-3: #D97706;
+    --chart-4: #DC2626;
+    --chart-5: #64748B;
+    --radius: 0.375rem;
+    /* Sidebar: slate-900 surface */
+    --sidebar: #0F172A;
+    --sidebar-foreground: #E2E8F0;
+    --sidebar-muted: #94A3B8;
+    --sidebar-primary: #1D4ED8;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #1E293B;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #1E293B;
+    --sidebar-ring: #3B82F6;
+    /* Semantic: solid / text (-foreground) / soft bg */
+    --success: #059669;
+    --success-foreground: #047857;
+    --success-soft: #ECFDF5;
+    --warning: #D97706;
+    --warning-foreground: #B45309;
+    --warning-soft: #FFFBEB;
+    --danger: #DC2626;
+    --danger-foreground: #B91C1C;
+    --danger-soft: #FEF2F2;
 }
 
 .dark {
@@ -122,11 +149,32 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
+  }
+  /* Page scrollbar lukano, wheel/touch/keyboard scroll thake */
+  html, body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none;
+  }
   html {
-    @apply font-sans;
-    }
+    @apply font-sans antialiased;
+  }
+  body {
+    @apply min-h-svh overflow-x-hidden bg-background text-sm text-foreground;
+  }
+  /* Sob songkha / timer er digit soman chowra */
+  .tabular-nums, time {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Scrollbar lukano utility — scroll kaj kore */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

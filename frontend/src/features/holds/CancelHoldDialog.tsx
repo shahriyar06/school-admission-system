@@ -25,7 +25,7 @@ export function CancelHoldDialog({ className, open, onOpenChange, onConfirm, pen
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" className="text-destructive" disabled={disabled}>
+        <Button type="button" variant="outline" className="h-10 w-full text-danger-foreground hover:bg-danger/5 hover:text-danger-foreground" disabled={disabled}>
           আবেদন বাতিল করুন
         </Button>
       </DialogTrigger>

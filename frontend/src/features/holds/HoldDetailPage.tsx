@@ -1,5 +1,18 @@
 import { useCallback, useState } from 'react'
-import { CircleCheck, CircleX, Clock, LoaderCircle, TriangleAlert } from 'lucide-react'
+import {
+  CalendarClock,
+  CircleCheck,
+  CircleX,
+  Clock,
+  CreditCard,
+  Hash,
+  Hourglass,
+  IdCard,
+  LoaderCircle,
+  ShieldCheck,
+  Ticket,
+  TriangleAlert,
+} from 'lucide-react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { ErrorAlert } from '@/components/ErrorAlert'
@@ -12,8 +25,10 @@ import { useStudent } from '@/features/student/use-student'
 import { getErrorMessage, isApiError } from '@/lib/api-error'
 import { toBanglaDigits } from '@/lib/digits'
 import { formatDateTime } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { Hold } from '@/types/api'
 import { CancelHoldDialog } from './CancelHoldDialog'
+import { HoldSteps } from './HoldSteps'
 import { getEffectiveStatus } from './effective-status'
 import { useCancelHold, useConfirmHold, useHold } from './hooks'
 import { useCountdown } from './useCountdown'
@@ -110,8 +125,24 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
     )
   }
 
+  // Sudhu rong: sesh 60 second e amber (somoy prai sesh)
+  const urgent = status === 'HELD' && countdown.remainingMs <= 60_000
+  const hasPanel = status === 'HELD' || status === 'EXPIRED' || busy
+  // Progress er jonno prothom render er baki somoy (sudhu dekhano)
+  const [initialRemaining] = useState(() => Math.max(countdown.remainingMs, 1))
+  const progress = status === 'HELD' ? Math.min(100, (countdown.remainingMs / initialRemaining) * 100) : 0
+  const band =
+    status === 'CONFIRMED'
+      ? 'bg-success'
+      : status === 'HELD'
+        ? 'bg-primary'
+        : 'bg-danger'
+  const digits = (status === 'HELD' ? toBanglaDigits(countdown.formatted) : '০০:০০').split(':')
+
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground">ড্যাশবোর্ড / আবেদনের বিস্তারিত</p>
+
       {/* Poll fail holeo (exp: server bondho) shesh tothyo dekhai, sathe error */}
       {error != null && (
         <ErrorAlert
@@ -122,84 +153,156 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
         />
       )}
 
-      <Card>
-        <CardHeader>
-          <CardDescription>ভর্তির আবেদন</CardDescription>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="text-xl break-words">{hold.className}</CardTitle>
-            <StatusBadge status={status} className="text-sm" />
-          </div>
-        </CardHeader>
+      <HoldSteps status={status} />
 
-        <CardContent className="flex flex-col gap-4">
-          {status === 'HELD' && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-center text-amber-950">
-              <div className="flex items-center justify-center gap-1.5 text-sm">
-                <Clock className="size-4" aria-hidden />
-                মেয়াদ শেষ হতে বাকি:
-              </div>
-              {/* Screen reader proti second e na porar jonno aria-live off */}
-              <div className="mt-1 font-mono text-4xl font-bold tabular-nums" aria-live="off">
-                {toBanglaDigits(countdown.formatted)}
-              </div>
-              <p className="mt-1 text-xs">এই সময়ের মধ্যে ভর্তি ফি দিলে সিটটি আপনার জন্য নিশ্চিত হবে।</p>
+      <div className={cn('grid gap-6', hasPanel && 'lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start')}>
+        {/* Admission ticket: status onujayi rong er band, niche notch soho dashed divider */}
+        <Card className="relative gap-0 overflow-visible rounded-lg border-border py-0 shadow-sm">
+          <div className={cn('rounded-t-lg px-6 py-6 text-white transition-colors sm:px-8', band)}>
+            <CardDescription className="flex items-center gap-1.5 text-white/80">
+              <Ticket className="size-4" aria-hidden />
+              ভর্তির আবেদন
+            </CardDescription>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-2xl font-bold tracking-tight wrap-break-word text-white sm:text-3xl">{hold.className}</CardTitle>
+              <StatusBadge status={status} className="border-white/40 shadow-sm" />
             </div>
-          )}
+          </div>
 
-          {status === 'EXPIRED' && (
-            <Alert className="border-zinc-300 bg-zinc-50">
-              <TriangleAlert aria-hidden />
-              <AlertTitle>মেয়াদ শেষ</AlertTitle>
-              <AlertDescription>
-                {EXPIRED_MESSAGE} চাইলে ক্লাস তালিকা থেকে আবার আবেদন করতে পারেন (সিট খালি থাকলে)।
-              </AlertDescription>
-            </Alert>
-          )}
+          <CardContent className="flex flex-col gap-5 px-6 py-6 sm:px-8">
+            {status === 'EXPIRED' && (
+              <Alert className="rounded-md border-danger/25 bg-danger-soft px-4 py-3 text-danger-foreground">
+                <TriangleAlert aria-hidden />
+                <AlertTitle>মেয়াদ শেষ</AlertTitle>
+                <AlertDescription className="text-danger-foreground">
+                  {EXPIRED_MESSAGE} চাইলে ক্লাস তালিকা থেকে আবার আবেদন করতে পারেন (সিট খালি থাকলে)।
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {status === 'CONFIRMED' && (
-            <Alert className="border-emerald-300 bg-emerald-50 text-emerald-900">
-              <CircleCheck aria-hidden />
-              <AlertTitle>ভর্তি নিশ্চিত হয়েছে</AlertTitle>
-              <AlertDescription className="text-emerald-900/90">
-                ভর্তি ফি পাওয়া গেছে। এই ক্লাসে আপনার সিট নিশ্চিত।
-              </AlertDescription>
-            </Alert>
-          )}
+            {status === 'CONFIRMED' && (
+              <Alert className="rounded-md border-success/25 bg-success-soft px-4 py-3 text-success-foreground">
+                <CircleCheck aria-hidden />
+                <AlertTitle>ভর্তি নিশ্চিত হয়েছে</AlertTitle>
+                <AlertDescription className="text-success-foreground">
+                  ভর্তি ফি পাওয়া গেছে। এই ক্লাসে আপনার সিট নিশ্চিত।
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {status === 'CANCELLED' && (
-            <Alert className="border-red-200 bg-red-50 text-red-900">
-              <CircleX aria-hidden />
-              <AlertTitle>আবেদন বাতিল</AlertTitle>
-              <AlertDescription className="text-red-900/90">এই আবেদনটি বাতিল করা হয়েছে।</AlertDescription>
-            </Alert>
-          )}
+            {status === 'CANCELLED' && (
+              <Alert className="rounded-md border-border bg-slate-50 px-4 py-3">
+                <CircleX aria-hidden />
+                <AlertTitle>আবেদন বাতিল</AlertTitle>
+                <AlertDescription>এই আবেদনটি বাতিল করা হয়েছে।</AlertDescription>
+              </Alert>
+            )}
 
-          {!isOwner && (
-            <Alert className="border-amber-300 bg-amber-50 text-amber-900">
-              <TriangleAlert aria-hidden />
-              <AlertTitle>{studentId ? 'এই আবেদনটি আপনার নয়' : 'Student ID দেওয়া হয়নি'}</AlertTitle>
-              <AlertDescription className="text-amber-900/90">
-                {studentId
-                  ? 'এই আবেদনটি অন্য একটি Student ID দিয়ে করা হয়েছে। আপনি শুধু দেখতে পারবেন, ভর্তি ফি দেওয়া বা বাতিল করা যাবে না।'
-                  : 'ভর্তি ফি দিতে বা বাতিল করতে উপরে যে Student ID দিয়ে আবেদন করেছিলেন সেটি দিন।'}
-              </AlertDescription>
-            </Alert>
-          )}
+            {!isOwner && (
+              <Alert className="rounded-md border-warning/30 bg-warning-soft px-4 py-3 text-warning-foreground">
+                <TriangleAlert aria-hidden />
+                <AlertTitle>{studentId ? 'এই আবেদনটি আপনার নয়' : 'Student ID দেওয়া হয়নি'}</AlertTitle>
+                <AlertDescription className="text-warning-foreground">
+                  {studentId
+                    ? 'এই আবেদনটি অন্য একটি Student ID দিয়ে করা হয়েছে। আপনি শুধু দেখতে পারবেন, ভর্তি ফি দেওয়া বা বাতিল করা যাবে না।'
+                    : 'ভর্তি ফি দিতে বা বাতিল করতে উপরে যে Student ID দিয়ে আবেদন করেছিলেন সেটি দিন।'}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Student ID</dt>
-            <dd className="font-mono break-all">{hold.studentId}</dd>
-            <dt className="text-muted-foreground">{status === 'HELD' ? 'মেয়াদ শেষ হবে' : 'ফি দেওয়ার শেষ সময়'}</dt>
-            <dd>{formatDateTime(hold.expiresAt)} (বাংলাদেশ সময়)</dd>
-            <dt className="text-muted-foreground">আবেদন নম্বর</dt>
-            <dd className="font-mono text-xs break-all">{hold.holdId}</dd>
-          </dl>
-        </CardContent>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-md bg-slate-50 p-4 ring-1 ring-slate-100">
+                <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <IdCard className="size-4" aria-hidden />
+                  Student ID
+                </dt>
+                <dd className="mt-1 font-mono text-lg font-semibold tracking-wider break-all">{hold.studentId}</dd>
+              </div>
+              <div className="rounded-md bg-slate-50 p-4 ring-1 ring-slate-100">
+                <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarClock className="size-4" aria-hidden />
+                  {status === 'HELD' ? 'মেয়াদ শেষ হবে' : 'ফি দেওয়ার শেষ সময়'}
+                </dt>
+                <dd className="mt-1 text-sm font-medium">{formatDateTime(hold.expiresAt)} (বাংলাদেশ সময়)</dd>
+              </div>
+            </dl>
+          </CardContent>
+
+          {/* Ticket er chhera dag: dui pashe notch */}
+          <div className="relative px-6 sm:px-8" aria-hidden>
+            <span className="absolute top-1/2 -left-3.5 size-7 -translate-y-1/2 rounded-full border border-border bg-background" />
+            <span className="absolute top-1/2 -right-3.5 size-7 -translate-y-1/2 rounded-full border border-border bg-background" />
+            <div className="border-t-2 border-dashed border-border" />
+          </div>
+
+          <div className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <dl>
+              <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Hash className="size-4" aria-hidden />
+                আবেদন নম্বর
+              </dt>
+              <dd className="mt-0.5 font-mono text-xs break-all">{hold.holdId}</dd>
+            </dl>
+            {/* Barcode er moto noksha, sudhu sajano */}
+            <div className="flex h-10 items-end gap-[3px] opacity-70" aria-hidden>
+              {Array.from({ length: 28 }, (_, i) => (
+                <span key={i} className="w-[2px] rounded-sm bg-slate-800" style={{ height: `${40 + ((i * 37) % 60)}%` }} />
+              ))}
+            </div>
+          </div>
+        </Card>
 
         {/* EXPIRED hole o "ভর্তি ফি দিন" disabled obosthay thake, jate bujha jay ar fi deya jabe na */}
-        {(status === 'HELD' || status === 'EXPIRED' || busy) && (
-          <>
-            <CardFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {hasPanel && (
+          <Card className="gap-5 rounded-lg border-border p-6 shadow-sm lg:sticky lg:top-10">
+            {status === 'HELD' && (
+              <div
+                className={cn(
+                  'rounded-lg p-5 text-center transition-colors',
+                  urgent ? 'bg-warning-soft text-warning-foreground ring-1 ring-warning/30' : 'bg-accent text-primary ring-1 ring-primary/15',
+                )}
+              >
+                <div className="flex items-center justify-center gap-1.5 text-sm font-semibold">
+                  <Clock className="size-4" aria-hidden />
+                  মেয়াদ শেষ হতে বাকি:
+                </div>
+                {/* Screen reader proti second e na porar jonno aria-live off; box gulo sudhu dekhano */}
+                <div className="sr-only" aria-live="off">
+                  {toBanglaDigits(countdown.formatted)}
+                </div>
+                <CountdownBoxes digits={digits} tone={urgent ? 'amber' : 'indigo'} />
+                <div className="mt-4 h-2 overflow-hidden rounded-sm bg-white ring-1 ring-black/5" aria-hidden>
+                  <div
+                    className={cn('h-full transition-[width] duration-1000 ease-linear', urgent ? 'bg-warning' : 'bg-primary')}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-xs text-foreground/70">এই সময়ের মধ্যে ভর্তি ফি দিলে সিটটি আপনার জন্য নিশ্চিত হবে।</p>
+              </div>
+            )}
+
+            {status === 'EXPIRED' && (
+              <div className="rounded-lg bg-danger-soft p-5 text-center text-danger-foreground ring-1 ring-danger/20" aria-hidden>
+                <div className="flex items-center justify-center gap-1.5 text-sm font-semibold">
+                  <Hourglass className="size-4" />
+                  সময় শেষ
+                </div>
+                <CountdownBoxes digits={digits} tone="rose" />
+                <div className="mt-4 h-2 rounded-sm bg-danger/10" />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2.5">
+              <Button
+                type="button"
+                size="lg"
+                className="h-12 w-full text-base font-semibold shadow-md "
+                onClick={onConfirm}
+                disabled={!canAct || busy}
+              >
+                {confirm.isPending ? <LoaderCircle className="animate-spin" aria-hidden /> : <CreditCard aria-hidden />}
+                {confirm.isPending ? 'ফি দেওয়া হচ্ছে…' : 'ভর্তি ফি দিন'}
+              </Button>
               {(canAct || cancel.isPending) && (
                 <CancelHoldDialog
                   className={hold.className}
@@ -210,16 +313,35 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
                   disabled={busy}
                 />
               )}
-              <Button type="button" size="lg" onClick={onConfirm} disabled={!canAct || busy}>
-                {confirm.isPending && <LoaderCircle className="animate-spin" aria-hidden />}
-                {confirm.isPending ? 'ফি দেওয়া হচ্ছে…' : 'ভর্তি ফি দিন'}
-              </Button>
-            </CardFooter>
-          </>
+            </div>
+            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <ShieldCheck className="size-3.5" aria-hidden />
+              নিরাপদ পেমেন্ট (simulation)
+            </p>
+          </Card>
         )}
-      </Card>
+      </div>
 
       <HoldLinks />
+    </div>
+  )
+}
+
+// mm:ss (ba hh:mm:ss) er protita ongsho alada box e, sudhu dekhano
+function CountdownBoxes({ digits, tone }: { digits: string[]; tone: 'indigo' | 'amber' | 'rose' }) {
+  const box = {
+    indigo: 'bg-white text-primary ring-primary/15',
+    amber: 'bg-white text-warning-foreground ring-warning/30',
+    rose: 'bg-white text-danger-foreground ring-danger/20',
+  }[tone]
+  return (
+    <div className="mt-3 flex items-center justify-center gap-2" aria-hidden>
+      {digits.map((part, i) => (
+        <div key={i} className="flex items-center gap-2">
+          {i > 0 && <span className="text-3xl font-bold opacity-50">:</span>}
+          <span className={cn('min-w-16 rounded-sm px-3 py-2 font-mono text-4xl font-bold tabular-nums ring-1', box)}>{part}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -256,18 +378,31 @@ function HoldNotFound() {
   )
 }
 
+// Asol layout er moto: upore dhap, bame details, dane action panel
 function HoldDetailSkeleton() {
   return (
-    <Card className="mx-auto max-w-xl" aria-label="লোড হচ্ছে">
-      <CardHeader className="gap-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-7 w-2/3" />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-      </CardContent>
-    </Card>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5" aria-label="লোড হচ্ছে">
+      <Skeleton className="h-14 w-full rounded-md" />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <Card className="shadow-sm">
+          <CardHeader className="gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-2/3" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-3/4" />
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardContent className="flex flex-col gap-3">
+            <Skeleton className="h-32 w-full rounded-md" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }

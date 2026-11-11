@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import { IdCard } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,13 +34,19 @@ export function StudentIdBox() {
   // Save kora ID ache ar edit korche na: sudhu ID ar "পরিবর্তন" dekhai
   if (studentId && !editing) {
     return (
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Student ID:</span>
-        <span className="font-mono font-medium tracking-wider">{studentId}</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-lg bg-white/5 p-3 text-sm ring-1 ring-white/10 lg:flex-col lg:items-stretch">
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-md bg-white/10 text-blue-200" aria-hidden>
+            <IdCard className="size-4" />
+          </span>
+          <span className="text-xs text-sidebar-muted">Student ID:</span>
+        </div>
+        <span className="min-w-0 font-mono text-[15px] font-semibold tracking-wider break-all text-white tabular-nums">{studentId}</span>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
+          className="bg-white/10 text-white hover:bg-white/20 lg:w-full"
           onClick={() => {
             setDraft(studentId)
             setEditing(true)
@@ -61,11 +68,12 @@ export function StudentIdBox() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex w-full flex-col gap-1.5 sm:w-auto" noValidate>
-      <Label htmlFor={inputId} className="text-sm">
+    <form onSubmit={onSubmit} className="flex w-full flex-col gap-2 rounded-lg bg-white/5 p-3 ring-1 ring-white/10" noValidate>
+      <Label htmlFor={inputId} className="text-xs font-medium text-sidebar-muted">
+        <IdCard className="size-3.5 text-blue-200" aria-hidden />
         Student ID (জন্ম নিবন্ধন নম্বর)
       </Label>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
         <Input
           id={inputId}
           value={draft}
@@ -76,14 +84,14 @@ export function StudentIdBox() {
           placeholder="যেমন: 20152691234567890"
           aria-invalid={draft.length > 0 && !status.ok}
           aria-describedby={hintId}
-          className="font-mono tracking-wider sm:w-64"
+          className="h-10 border-white/15 bg-white/10 font-mono tracking-wider text-white placeholder:text-white/50 sm:w-64 lg:w-full"
         />
-        <div className="flex gap-2">
-          <Button type="submit" disabled={!status.ok} className="flex-1 sm:flex-none">
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={!status.ok} className="flex-1 bg-sidebar-primary hover:bg-sidebar-primary/85 sm:flex-none lg:flex-1">
             সংরক্ষণ
           </Button>
           {studentId && (
-            <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
+            <Button type="button" variant="ghost" className="text-white/80 hover:bg-white/10 hover:text-white" onClick={() => setEditing(false)}>
               বাতিল
             </Button>
           )}
@@ -91,7 +99,7 @@ export function StudentIdBox() {
             <Button
               type="button"
               variant="ghost"
-              className="text-destructive"
+              className="text-red-300 hover:bg-white/10 hover:text-red-200"
               onClick={() => {
                 clearStudentId()
                 setDraft('')
@@ -106,7 +114,7 @@ export function StudentIdBox() {
       <p
         id={hintId}
         aria-live="polite"
-        className={cn('text-xs', status.ok ? 'text-emerald-600' : 'text-muted-foreground', draft.length > 0 && !status.ok && 'text-destructive')}
+        className={cn('text-xs', status.ok ? 'text-emerald-300' : 'text-sidebar-muted', draft.length > 0 && !status.ok && 'text-red-300')}
       >
         {status.text}
       </p>
