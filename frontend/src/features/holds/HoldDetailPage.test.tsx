@@ -1,11 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { delay, http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { toast } from 'sonner'
+import { describe, expect, it, vi } from 'vitest'
 import { STUDENT_A, STUDENT_B } from '@/test/fixtures'
 import { advanceTime, useAdvancingFakeTimers } from '@/test/helpers'
 import { API, countRequests, db, holdDto, problem, seedClass, seedHold } from '@/test/msw/handlers'
 import { server } from '@/test/msw/server'
 import { renderWithProviders } from '@/test/render'
+import { maskStudentId } from '@/lib/student-id'
 
 const EXPIRED_TEXT = 'আবেদনের মেয়াদ শেষ হয়ে গেছে, সিট অন্যদের জন্য খুলে দেওয়া হয়েছে।'
 const feeButton = () => screen.getByRole('button', { name: /ভর্তি ফি দিন|ফি দেওয়া হচ্ছে/ })
@@ -42,7 +44,8 @@ describe('HoldDetailPage', () => {
     await advanceTime(6000)
 
     expect(await screen.findByTitle('EXPIRED')).toHaveTextContent('মেয়াদোত্তীর্ণ')
-    expect(screen.getByText(EXPIRED_TEXT, { exact: false })).toBeInTheDocument()
+    // Inline alert + ekta warning toast
+    expect(screen.getAllByText(EXPIRED_TEXT, { exact: false })).toHaveLength(2)
     expect(screen.queryByText('মেয়াদ শেষ হতে বাকি:')).not.toBeInTheDocument()
     expect(feeButton()).toBeDisabled()
     expect(cancelTrigger()).not.toBeInTheDocument()
@@ -188,5 +191,54 @@ describe('HoldDetailPage', () => {
     expect(await screen.findByText('আবেদনের তথ্য আনা যায়নি')).toBeInTheDocument()
     expect(screen.getByText('সার্ভার এর সাথে যোগাযোগ করা যাচ্ছে না। কিছুক্ষণ পর আবার চেষ্টা করুন।')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'আবার চেষ্টা করুন' })).toBeInTheDocument()
+  })
+
+  describe('QA fixes', () => {
+    it('owner: countdown reaching 0 shows ONE warning toast, never duplicated by re-render or polling', async () => {
+      useAdvancingFakeTimers()
+      const warn = vi.spyOn(toast, 'warning')
+      setup({ expiresInMs: 3000 })
+      await screen.findByText('মেয়াদ শেষ হতে বাকি:')
+      await advanceTime(4000)
+      expect(await screen.findByTitle('EXPIRED')).toBeInTheDocument()
+      // exact match: sudhu toast (inline alert e baki text o ache)
+      expect(await screen.findAllByText(EXPIRED_TEXT)).toHaveLength(1)
+      // Aro poll / re-render er poro toast ekbar i
+      await advanceTime(15_000)
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(warn).toHaveBeenCalledWith(EXPIRED_TEXT, expect.anything())
+      warn.mockRestore()
+    })
+
+    it('not owner: no expiry toast', async () => {
+      useAdvancingFakeTimers()
+      setup({ studentId: STUDENT_B, owner: STUDENT_A, expiresInMs: 3000 })
+      await screen.findByText('মেয়াদ শেষ হতে বাকি:')
+      await advanceTime(4000)
+      expect(await screen.findByTitle('EXPIRED')).toBeInTheDocument()
+      expect(screen.queryAllByText(EXPIRED_TEXT)).toHaveLength(0)
+    })
+
+    it.each([
+      ['another student', STUDENT_B as string | null],
+      ['no id saved', null],
+    ])("%s: CONFIRMED hold uses neutral wording and a masked Student ID", async (_label, viewer) => {
+      const cls = seedClass({ name: 'Done Class', totalSeats: 2 })
+      const hold = seedHold({ classId: cls.id, studentId: STUDENT_A, status: 'CONFIRMED' })
+      renderWithProviders(undefined, { route: `/holds/${hold.holdId}`, studentId: viewer ?? undefined })
+      expect(await screen.findByText('এই আবেদনের সিট নিশ্চিত হয়েছে।')).toBeInTheDocument()
+      expect(screen.queryByText(/আপনার সিট নিশ্চিত/)).not.toBeInTheDocument()
+      expect(screen.getByText('2015•••••••••7890')).toBeInTheDocument()
+      expect(screen.queryByText(STUDENT_A)).not.toBeInTheDocument()
+    })
+
+    it('owner: CONFIRMED wording and full Student ID unchanged', async () => {
+      const cls = seedClass({ name: 'Done Class', totalSeats: 2 })
+      const hold = seedHold({ classId: cls.id, studentId: STUDENT_A, status: 'CONFIRMED' })
+      renderWithProviders(undefined, { route: `/holds/${hold.holdId}`, studentId: STUDENT_A })
+      expect(await screen.findByText('ভর্তি ফি পাওয়া গেছে। এই ক্লাসে আপনার সিট নিশ্চিত।')).toBeInTheDocument()
+      expect(screen.getAllByText(STUDENT_A).length).toBeGreaterThan(0)
+      expect(screen.queryByText(maskStudentId(STUDENT_A))).not.toBeInTheDocument()
+    })
   })
 })

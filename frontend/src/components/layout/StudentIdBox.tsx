@@ -21,6 +21,9 @@ function describe(value: string): { ok: boolean; text: string } {
       text: `আরও ${toBanglaDigits(left)}টি অঙ্ক বাকি (${toBanglaDigits(value.length)}/${toBanglaDigits(STUDENT_ID_LENGTH)})।`,
     }
   }
+  // maxLength bypass kore (programmatic) beshi digit asle o valid na
+  if (value.length > STUDENT_ID_LENGTH)
+    return { ok: false, text: `সর্বোচ্চ ${toBanglaDigits(STUDENT_ID_LENGTH)}টি অঙ্ক দেওয়া যাবে (এখন ${toBanglaDigits(value.length)}টি)।` }
   return { ok: true, text: 'নম্বরটি সঠিক।' }
 }
 

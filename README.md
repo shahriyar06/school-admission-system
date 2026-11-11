@@ -58,7 +58,7 @@ Seat counts on the list refresh every 3 seconds, so you can watch seats change w
 | Suite | Docker (no local tools) | Local (optional) |
 |---|---|---|
 | Backend, 114 tests | `docker compose --profile test run --rm tests` | `cd backend && dotnet test` (.NET 10 SDK; dev DB running on port 5433) |
-| Frontend, 142 tests | `docker compose --profile test run --rm frontend-test` | `cd frontend && pnpm install && pnpm test` (Node 22, pnpm 10) |
+| Frontend, 153 tests | `docker compose --profile test run --rm frontend-test` | `cd frontend && pnpm install && pnpm test` (Node 22, pnpm 10) |
 
 - Backend tests are integration tests against a real PostgreSQL. Each test class creates and drops its own database.
 - The **concurrency test** fires 50 simultaneous hold requests at a class with 5 seats. Exactly 5 succeed and the rest get `409 NO_SEATS`. Other tests prove that 20 simultaneous requests from one student produce exactly one hold, and that 20 simultaneous confirms stay consistent.

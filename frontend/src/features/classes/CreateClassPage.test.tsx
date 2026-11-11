@@ -22,7 +22,9 @@ describe('CreateClassPage (school admin): create a class from the UI', () => {
 
   it('valid submit → POST with trimmed name and a number, success toast, navigates to /', async () => {
     const { user } = renderPage()
-    await user.type(nameInput(), '   Class 6 - Morning Shift   ')
+    // type er bodole paste: Docker load e protita okkhor er event e 5s timeout hoto
+    await user.click(nameInput())
+    await user.paste('   Class 6 - Morning Shift   ')
     await user.type(seatsInput(), '40')
     expect(submit()).toBeEnabled()
     await user.click(submit())

@@ -1,5 +1,5 @@
 import { ClipboardList, GraduationCap, LayoutGrid, CirclePlus } from 'lucide-react'
-import { Link, NavLink } from 'react-router'
+import { Link, NavLink, useLocation } from 'react-router'
 import { cn } from '@/lib/utils'
 import { StudentIdBox } from './StudentIdBox'
 
@@ -11,6 +11,10 @@ const links = [
 
 // Ekoi element: lg+ e bam dike fixed dark sidebar, chhoto screen e upore top bar
 export function AppHeader() {
+  const { pathname } = useLocation()
+  // Hold er page "আমার আবেদন" er ongsho, tai oi link highlight
+  const onHoldPage = pathname.startsWith('/holds/')
+
   return (
     <header
       className={cn(
@@ -36,18 +40,21 @@ export function AppHeader() {
 
       <nav
         aria-label="প্রধান মেনু"
-        className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
+        className="grid grid-cols-3 gap-1.5 lg:flex lg:flex-col lg:gap-1"
       >
         {links.map(({ to, label, end, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
+            data-active={isLinkActive(to, pathname, onHoldPage) || undefined}
             className={({ isActive }) =>
               cn(
-                'group relative flex shrink-0 items-center gap-2.5 h-10 rounded-md px-3 text-sm whitespace-nowrap transition-colors duration-150 outline-none [&_svg]:size-[18px]',
-                'focus-visible:ring-3 focus-visible:ring-sidebar-ring/60 lg:rounded-md lg:px-3 lg:py-2.5',
-                isActive
+                // Mobile: 3 ta soman chowra item, icon upore label niche (390px e scroll chara)
+                'group relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-2 text-center text-[11px] leading-tight transition-colors duration-150 outline-none [&_svg]:size-[18px]',
+                'lg:h-10 lg:flex-row lg:justify-start lg:gap-2.5 lg:px-3 lg:py-2.5 lg:text-left lg:text-sm lg:whitespace-nowrap',
+                'focus-visible:ring-3 focus-visible:ring-sidebar-ring/60',
+                isActive || (to === '/me' && onHoldPage)
                   ? 'bg-sidebar-primary font-semibold text-sidebar-primary-foreground lg:before:absolute lg:before:inset-y-1.5 lg:before:left-0 lg:before:w-[3px] lg:before:rounded-r-sm lg:before:bg-blue-400'
                   : 'bg-white/5 text-sidebar-muted hover:bg-sidebar-accent hover:text-white lg:bg-transparent',
               )
@@ -64,4 +71,9 @@ export function AppHeader() {
       </div>
     </header>
   )
+}
+
+function isLinkActive(to: string, pathname: string, onHoldPage: boolean): boolean {
+  if (to === '/me') return pathname === '/me' || onHoldPage
+  return to === '/' ? pathname === '/' : pathname.startsWith(to)
 }

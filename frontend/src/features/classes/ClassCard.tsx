@@ -18,6 +18,8 @@ interface ClassCardProps {
   applying: boolean
   // Onno kono class er abedon jacche, tokhon sob button bondho
   busy: boolean
+  // Shesh fetch fail: purono data dekhano hocche
+  offline?: boolean
   onApply: (classId: string) => void
 }
 
@@ -39,7 +41,9 @@ function Legend({ dot, label, value }: { dot: string; label: string; value: numb
   )
 }
 
-export function ClassCard({ item, activeHold, hasStudentId, applying, busy, onApply }: ClassCardProps) {
+const OFFLINE_APPLY_HINT = 'সার্ভার এর সাথে সংযোগ ফিরলে আবেদন করা যাবে।'
+
+export function ClassCard({ item, activeHold, hasStudentId, applying, busy, offline = false, onApply }: ClassCardProps) {
   const full = item.availableSeats <= 0
   const shift = shiftOf(item.name)
   const ShiftIcon = shift?.icon
@@ -47,7 +51,9 @@ export function ClassCard({ item, activeHold, hasStudentId, applying, busy, onAp
   // Keno button bondho, seta button er niche lekha thakbe
   let reason: string | null = null
   if (!activeHold) {
-    if (!hasStudentId) reason = 'আবেদন করতে উপরে Student ID দিন।'
+    // Offline e purono data, tai apply bondho jotokkhon na poll safol hoy
+    if (offline) reason = OFFLINE_APPLY_HINT
+    else if (!hasStudentId) reason = 'আবেদন করতে উপরে Student ID দিন।'
     else if (full) reason = 'এই ক্লাস এ এখন কোনো সিট খালি নেই।'
   }
 
@@ -61,13 +67,13 @@ export function ClassCard({ item, activeHold, hasStudentId, applying, busy, onAp
       <div className={cn('h-1.5', full ? 'bg-danger' : 'bg-success')} aria-hidden />
 
       {full && (
-        <Badge variant="destructive" className="absolute top-4 right-0 rounded-l-sm rounded-r-none px-2.5">
+        <Badge variant="destructive" className="absolute top-4 right-4 rounded-sm px-2">
           সিট নেই
         </Badge>
       )}
 
       <CardHeader className="gap-2 px-5 pt-5">
-        <div className={cn('flex items-start gap-3', full && 'pr-20')}>
+        <div className={cn('flex items-start gap-3', full && 'pr-16')}>
           <span
             className={cn(
               'flex size-10 shrink-0 items-center justify-center rounded-md',
@@ -76,7 +82,8 @@ export function ClassCard({ item, activeHold, hasStudentId, applying, busy, onAp
           >
             <BookOpen className="size-5" aria-hidden />
           </span>
-          <div className="flex min-w-0 flex-col gap-1.5">
+          {/* Shift badge thak ba na thak, sob card e count er row ek line e */}
+          <div className="flex min-h-[4.375rem] min-w-0 flex-col gap-1.5">
             <CardTitle className={cn('text-base leading-snug wrap-break-word', full && 'text-muted-foreground')}>{item.name}</CardTitle>
             {shift && ShiftIcon && (
               <span className={cn('inline-flex w-fit items-center gap-1 rounded-sm px-2 py-0.5 text-[11px] font-medium ring-1', shift.className)}>
@@ -124,7 +131,7 @@ export function ClassCard({ item, activeHold, hasStudentId, applying, busy, onAp
             type="button"
             className="h-10 w-full font-semibold shadow-sm "
             onClick={() => onApply(item.id)}
-            disabled={!hasStudentId || full || busy}
+            disabled={!hasStudentId || full || busy || offline}
             aria-busy={applying}
           >
             {applying && <LoaderCircle className="animate-spin" aria-hidden />}

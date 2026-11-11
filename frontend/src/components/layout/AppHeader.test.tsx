@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { STUDENT_ID_STORAGE_KEY } from '@/features/student/StudentContext'
 import { STUDENT_A, STUDENT_B } from '@/test/fixtures'
@@ -90,5 +90,32 @@ describe('AppHeader: title, navigation and the Student ID box', () => {
     await user.click(screen.getByRole('button', { name: 'মুছে ফেলুন' }))
     expect(localStorage.getItem(STUDENT_ID_STORAGE_KEY)).toBeNull()
     expect(idInput()).toHaveValue('')
+  })
+
+  describe('QA fixes', () => {
+    it('"আমার আবেদন" is highlighted on /holds/:holdId pages', () => {
+      renderWithProviders(<AppHeader />, { route: '/holds/00000000-0000-0000-0000-000000000001' })
+      expect(screen.getByRole('link', { name: 'আমার আবেদন' })).toHaveAttribute('data-active', 'true')
+      expect(screen.getByRole('link', { name: 'ক্লাস তালিকা' })).not.toHaveAttribute('data-active')
+    })
+
+    it('mobile nav: 3 equal-width grid items, no horizontal scroll; same accessible names', () => {
+      renderWithProviders(<AppHeader />)
+      const nav = screen.getByRole('navigation', { name: 'প্রধান মেনু' })
+      expect(nav).toHaveClass('grid', 'grid-cols-3')
+      expect(nav.className).not.toMatch(/overflow-x-auto/)
+      for (const name of ['ক্লাস তালিকা', 'আমার আবেদন', 'ক্লাস তৈরি (Admin)']) {
+        expect(within(nav).getByRole('link', { name })).toBeInTheDocument()
+      }
+    })
+
+    it('more than 17 digits set programmatically (bypassing maxlength) is rejected', () => {
+      renderWithProviders(<AppHeader />)
+      fireEvent.change(idInput(), { target: { value: `${STUDENT_A}99` } })
+      expect(screen.getByText('সর্বোচ্চ ১৭টি অঙ্ক দেওয়া যাবে (এখন ১৯টি)।')).toBeInTheDocument()
+      expect(screen.queryByText('নম্বরটি সঠিক।')).not.toBeInTheDocument()
+      expect(idInput()).toHaveAttribute('aria-invalid', 'true')
+      expect(saveButton()).toBeDisabled()
+    })
   })
 })

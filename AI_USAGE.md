@@ -4,6 +4,7 @@
 
 - **Claude (chat):** reading and breaking down the requirements, planning the architecture, and writing step-by-step task prompts.
 - **Claude Code (CLI, in the VS Code terminal):** implementing code, tests, Dockerfiles and documentation from those prompts, and running builds and tests.
+- **Claude in Chrome (browser extension):** ran an end-to-end UI QA pass against the running app, from a test plan I wrote with Claude (46 cases: validation, apply/confirm/cancel flows, toasts and error messages, auto-refresh, expiry, server-down behaviour, mobile width, and a 100-users / 20-seats concurrent apply test).
 
 ## Where AI was used
 
@@ -44,12 +45,18 @@
 | `setState` inside an effect in `useCountdown`; `Date` call during render | Lint (`set-state-in-effect`, `purity`) | First tick via `setTimeout`; year computed once at module level |
 | Stray Cyrillic/Arabic letters in code comments | Review, then a script scan of `src` | Replaced and re-scanned |
 | First UI polish was too subtle | Manual review of screenshots | Full layout redesign, then a final palette and radius pass |
+| Another student's confirmed hold showed "your seat is confirmed" wording and their full Student ID | Browser QA pass I ran with Claude in Chrome; I reviewed the report and decided to fix it | Neutral wording and a masked ID for non-owners |
+| "LIVE" indicator stayed on and apply stayed enabled while the backend was down | Browser QA pass I ran with Claude in Chrome; I reviewed the report and decided to fix it | "অফলাইন" chip; apply disabled until data is fresh again |
+| Expiry was shown only inline (easy to miss if scrolled away) | Browser QA pass I ran with Claude in Chrome; I reviewed the report and decided to fix it | One-time warning toast for the owner |
+| Mobile nav item cut off at 390px; no active nav item on hold pages | Browser QA pass I ran with Claude in Chrome; I reviewed the report and decided to fix it | Equal-width mobile nav; "আমার আবেদন" active on hold pages |
+| Uneven class card heights and a badge touching the card edge | Browser QA pass I ran with Claude in Chrome; I reviewed the report and decided to fix it | Aligned card layout and inset badge |
 
 ## How AI output was verified
 
-- **Automated tests:** backend 114/114 and frontend 142/142, run locally and in Docker.
+- **Automated tests:** backend 114/114 and frontend 153/153, run locally and in Docker.
 - **Concurrency:** 50 parallel requests on 5 seats → exactly 5 holds, also with two app hosts on one database.
 - **Multi-instance:** two backend containers (8080 and 8081) on one database gave consistent seat counts and no overbooking.
 - **Clean run:** `docker compose down -v`, then `up -d --build`, then a curl flow (create, hold, confirm, my holds) and both test suites.
 - **Manual UI checks:** a checklist of the main flows in the browser, including expiry, races between two tabs and backend down.
+- **Browser QA pass:** 46/46 cases passed; 100 concurrent requests on 20 seats gave exactly 20 × 201 and 80 × 409 `NO_SEATS` in two runs, 0 × 5xx.
 - **Code review:** every diff was read before commit, and every root cause was investigated rather than hidden by larger timeouts.

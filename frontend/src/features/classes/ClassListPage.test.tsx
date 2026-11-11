@@ -174,4 +174,31 @@ describe('ClassListPage', () => {
     expect(await screen.findByText('এখনো কোনো ক্লাস তৈরি হয়নি')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'ক্লাস তৈরি করুন (Admin)' })).toHaveAttribute('href', '/admin/classes/new')
   })
+
+  describe('QA fixes: offline state', () => {
+    it('poll fails → "অফলাইন" chip instead of LIVE, hint hidden, apply disabled with a hint; recovers automatically', async () => {
+      useAdvancingFakeTimers()
+      seedClass({ name: 'Offline Class', totalSeats: 3 })
+      renderList(STUDENT_A)
+      const card = await findClassCard('Offline Class')
+      expect(applyButton(card)).toBeEnabled()
+      expect(screen.getByText('প্রতি ৩ সেকেন্ডে আপডেট হয়', { exact: false })).toBeInTheDocument()
+
+      server.use(http.get(`${API}/classes`, () => HttpResponse.error()))
+      await advanceTime(3100)
+      expect(await screen.findByText('অফলাইন')).toBeInTheDocument()
+      expect(screen.queryByText('Live')).not.toBeInTheDocument()
+      expect(screen.queryByText('প্রতি ৩ সেকেন্ডে আপডেট হয়', { exact: false })).not.toBeInTheDocument()
+      const offlineCard = await findClassCard('Offline Class')
+      expect(applyButton(offlineCard)).toBeDisabled()
+      expect(within(offlineCard).getByText('সার্ভার এর সাথে সংযোগ ফিরলে আবেদন করা যাবে।')).toBeInTheDocument()
+
+      // Server fire ele porer poll e nijei abar chalu
+      server.resetHandlers()
+      await advanceTime(3100)
+      await waitFor(() => expect(screen.queryByText('অফলাইন')).not.toBeInTheDocument())
+      expect(screen.getByText('Live')).toBeInTheDocument()
+      expect(applyButton(await findClassCard('Offline Class'))).toBeEnabled()
+    })
+  })
 })

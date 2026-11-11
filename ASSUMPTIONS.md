@@ -59,6 +59,8 @@
 - **No automatic retry for mutations** (no double holds/confirms). Queries do not retry on 4xx and retry at most twice on network/5xx errors.
 - **The UI is in Bengali.** Backend error `code`s map to Bengali messages; times are shown in `Asia/Dhaka`. When the server is down the last data stays visible with an error, never a blank page.
 - **No quick confirm/cancel on *My applications*.** Rows link to the detail page, so the rules live in one place. There is no dark mode.
+- **Non-owners see a masked Student ID** (first 4 + last 4 digits) and neutral wording on a hold page; the owner sees the full ID.
+- **Offline state:** when the latest class poll fails, the list shows "অফলাইন" and apply is disabled until a poll succeeds again, so no one applies on stale seat counts.
 
 
 ## Additional decisions

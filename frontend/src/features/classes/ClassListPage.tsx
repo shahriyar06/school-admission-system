@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Armchair, BookOpen, GraduationCap, Inbox, Layers, LoaderCircle, Plus, School, Sparkles, Users } from 'lucide-react'
+import { Armchair, BookOpen, GraduationCap, Inbox, Layers, LoaderCircle, Plus, School, Sparkles, Users, WifiOff } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/EmptyState'
@@ -38,6 +38,8 @@ export function ClassListPage() {
     return map
   }, [myHolds.data, now])
 
+  // Data ache kintu shesh poll fail: offline, LIVE na dekhiye apply bondho
+  const offline = classes.isError && !!classes.data
   const applyingClassId = createHold.isPending ? createHold.variables?.classId : undefined
 
   const onApply = (classId: string) => {
@@ -120,6 +122,16 @@ export function ClassListPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold tracking-tight">সকল ক্লাস</h2>
+        {offline ? (
+          <p
+            className="flex items-center gap-2 rounded-md border border-danger/25 bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger-foreground"
+            aria-live="polite"
+          >
+            <WifiOff className="size-3.5" aria-hidden />
+            অফলাইন
+            {classes.dataUpdatedAt > 0 && <span className="font-normal"> · শেষ আপডেট {formatTime(classes.dataUpdatedAt)}</span>}
+          </p>
+        ) : (
         <p
           className="flex items-center gap-2 rounded-md border border-success/25 bg-success-soft px-2.5 py-1 text-xs text-success-foreground shadow-xs"
           aria-live="polite"
@@ -138,6 +150,7 @@ export function ClassListPage() {
           প্রতি ৩ সেকেন্ডে আপডেট হয়
           {classes.dataUpdatedAt > 0 && <> · শেষ আপডেট {formatTime(classes.dataUpdatedAt)}</>}
         </p>
+        )}
       </div>
 
       {classes.isPending && <ClassListSkeleton />}
@@ -168,6 +181,7 @@ export function ClassListPage() {
               hasStudentId={!!studentId}
               applying={applyingClassId === item.id}
               busy={createHold.isPending}
+              offline={offline}
               onApply={onApply}
             />
           ))}

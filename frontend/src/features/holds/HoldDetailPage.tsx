@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   CalendarClock,
   CircleCheck,
@@ -25,6 +25,7 @@ import { useStudent } from '@/features/student/use-student'
 import { getErrorMessage, isApiError } from '@/lib/api-error'
 import { toBanglaDigits } from '@/lib/digits'
 import { formatDateTime } from '@/lib/format'
+import { maskStudentId } from '@/lib/student-id'
 import { cn } from '@/lib/utils'
 import type { Hold } from '@/types/api'
 import { CancelHoldDialog } from './CancelHoldDialog'
@@ -84,15 +85,22 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
   const cancel = useCancelHold()
   const [dialogOpen, setDialogOpen] = useState(false)
 
+  const isOwner = !!studentId && hold.studentId === studentId
+  // Ekoi hold e toast ekbar i (re-render / poll e abar na)
+  const expiryToastShown = useRef(false)
+
   // Countdown 0 hole: client e sathe sathe EXPIRED, ar server theke o notun status ani
   const onExpire = useCallback(() => {
     setDialogOpen(false)
+    if (isOwner && !expiryToastShown.current) {
+      expiryToastShown.current = true
+      toast.warning(EXPIRED_MESSAGE, { id: `hold-expired-${hold.holdId}` })
+    }
     void refetch()
-  }, [refetch])
+  }, [refetch, isOwner, hold.holdId])
   const countdown = useCountdown(hold.status === 'HELD' ? hold.expiresAt : undefined, onExpire)
 
   const status = getEffectiveStatus(hold, countdown.nowMs)
-  const isOwner = !!studentId && hold.studentId === studentId
   const busy = confirm.isPending || cancel.isPending
   const canAct = status === 'HELD' && isOwner
 
@@ -185,7 +193,7 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
                 <CircleCheck aria-hidden />
                 <AlertTitle>ভর্তি নিশ্চিত হয়েছে</AlertTitle>
                 <AlertDescription className="text-success-foreground">
-                  ভর্তি ফি পাওয়া গেছে। এই ক্লাসে আপনার সিট নিশ্চিত।
+                  {isOwner ? 'ভর্তি ফি পাওয়া গেছে। এই ক্লাসে আপনার সিট নিশ্চিত।' : 'এই আবেদনের সিট নিশ্চিত হয়েছে।'}
                 </AlertDescription>
               </Alert>
             )}
@@ -216,7 +224,7 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
                   <IdCard className="size-4" aria-hidden />
                   Student ID
                 </dt>
-                <dd className="mt-1 font-mono text-lg font-semibold tracking-wider break-all">{hold.studentId}</dd>
+                <dd className="mt-1 font-mono text-lg font-semibold tracking-wider break-all tabular-nums">{isOwner ? hold.studentId : maskStudentId(hold.studentId)}</dd>
               </div>
               <div className="rounded-md bg-slate-50 p-4 ring-1 ring-slate-100">
                 <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -277,7 +285,9 @@ function HoldDetail({ hold, refetch, error, refetching }: HoldDetailProps) {
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <p className="mt-3 text-xs text-foreground/70">এই সময়ের মধ্যে ভর্তি ফি দিলে সিটটি আপনার জন্য নিশ্চিত হবে।</p>
+                <p className="mt-3 text-xs text-foreground/70">
+                  {isOwner ? 'এই সময়ের মধ্যে ভর্তি ফি দিলে সিটটি আপনার জন্য নিশ্চিত হবে।' : 'এই সময়ের মধ্যে ভর্তি ফি দিলে সিটটি নিশ্চিত হবে।'}
+                </p>
               </div>
             )}
 
